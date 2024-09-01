@@ -1,8 +1,8 @@
 import functools
 import json
 import logging
-import pprint
 import requests.compat
+import time
 import urllib.error
 import urllib.request
 
@@ -10,6 +10,7 @@ import urllib.request
 _BASE_URL = 'https://leetcode.com/api/'
 _ALL_PROBLEMS_URL = requests.compat.urljoin(_BASE_URL, 'problems/all/')
 _SUBMISSIONS_URL_FMT = requests.compat.urljoin(_BASE_URL, 'submissions/%s')
+_FETCH_DELAY = 0.5
 
 
 class LeetFetcher:
@@ -19,13 +20,20 @@ class LeetFetcher:
                 'User-Agent': 'LeetFS',
                 'Cookie': self.cookies,
         }
+        self.last_fetch = 0
 
     @functools.lru_cache
     def _fetchUrl(self, url):
         logging.info('Fetching %s', url)
+        cur_time = time.time()
+        if cur_time - self.last_fetch < _FETCH_DELAY:
+            time.sleep(_FETCH_DELAY)
+
         request = urllib.request.Request(url, headers=self.headers)
+        self.last_fetch = time.time()
         with urllib.request.urlopen(request) as response:
-            return response.read()
+            ans = response.read()
+            return ans
 
     def fetchProblemSlugs(self):
         all_problems = self._fetchUrl(_ALL_PROBLEMS_URL)
@@ -50,9 +58,9 @@ def main():
         fetcher = LeetFetcher(cookie.read().strip())
         slugs = fetcher.fetchProblemSlugs()
         for problem in slugs:
-            pprint.pprint(problem)
-        pprint.pprint(fetcher.fetchSubmissions(slugs[0]))
-        pprint.pprint(fetcher.fetchCode(slugs[0], 1343707442))
+            logging.info(problem)
+        logging.info(fetcher.fetchSubmissions(slugs[0]))
+        logging.info(fetcher.fetchCode(slugs[0], 1343707442))
     
 
 if __name__ == '__main__':
