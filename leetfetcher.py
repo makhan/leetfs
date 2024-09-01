@@ -1,10 +1,12 @@
 import functools
 import json
 import logging
-import requests.compat
 import time
+
 import urllib.error
 import urllib.request
+
+import requests.compat
 
 
 _BASE_URL = 'https://leetcode.com/api/'
@@ -23,7 +25,7 @@ class LeetFetcher:
         self.last_fetch = 0
 
     @functools.lru_cache
-    def _fetchUrl(self, url):
+    def _fetch_url(self, url):
         logging.info('Fetching %s', url)
         cur_time = time.time()
         if cur_time - self.last_fetch < _FETCH_DELAY:
@@ -35,21 +37,23 @@ class LeetFetcher:
             ans = response.read()
             return ans
 
-    def fetchProblemSlugs(self):
-        all_problems = self._fetchUrl(_ALL_PROBLEMS_URL)
+    def fetch_problem_slugs(self):
+        all_problems = self._fetch_url(_ALL_PROBLEMS_URL)
         all_problem_data = json.loads(all_problems)
         logging.debug('user name: %s', all_problem_data['user_name'])
         if not all_problem_data['user_name']:
             logging.critical('Login failed')
             raise IOError('login failed')
-        return [stat_data['stat']['question__title_slug'] for stat_data in all_problem_data['stat_status_pairs'] if  stat_data['status'] == 'ac']
+        return [stat_data['stat']['question__title_slug']
+                for stat_data in all_problem_data['stat_status_pairs']
+                if  stat_data['status'] == 'ac']
 
-    def fetchSubmissions(self, slug):
-        submission_data = self._fetchUrl(_SUBMISSIONS_URL_FMT % slug)
+    def fetch_submissions(self, slug):
+        submission_data = self._fetch_url(_SUBMISSIONS_URL_FMT % slug)
         return json.loads(submission_data)['submissions_dump']
 
-    def fetchCode(self, slug, submission_id):
-        submission_data = self.fetchSubmissions(slug)
+    def fetch_code(self, slug, submission_id):
+        submission_data = self.fetch_submissions(slug)
         for submission in submission_data:
             if submission['id'] == submission_id:
                 return submission['code']
@@ -58,14 +62,14 @@ class LeetFetcher:
 
 def main():
 
-    with open('cookie.txt') as cookie:
+    with open('cookie.txt', encoding='utf-8') as cookie:
         fetcher = LeetFetcher(cookie.read().strip())
-        slugs = fetcher.fetchProblemSlugs()
+        slugs = fetcher.fetch_problem_slugs()
         for problem in slugs:
             logging.info(problem)
-        logging.info(fetcher.fetchSubmissions(slugs[0]))
-        logging.info(fetcher.fetchCode(slugs[0], 1343707442))
-    
+        logging.info(fetcher.fetch_submissions(slugs[0]))
+        logging.info(fetcher.fetch_code(slugs[0], 1343707442))
+
 
 if __name__ == '__main__':
     main()

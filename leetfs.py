@@ -103,7 +103,7 @@ class LeetFS(Operations):
             file_name = components[1]
             submission_id = int(file_name[:file_name.index('.')])
             try:
-                submissions = self.fetcher.fetchSubmissions(slug)
+                submissions = self.fetcher.fetch_submissions(slug)
             except IOError as exc:
                 logging.error('No slug found : %s', slug)
                 raise FuseOSError(errno.EEXIST) from exc
@@ -118,8 +118,8 @@ class LeetFS(Operations):
         logging.info('readdir %s', path)
         directory_entries = ['.', '..']
         if path == '/':
-            directory_entries.extend(self.fetcher.fetchProblemSlugs())
-            logging.debug('all slugs: %s', ','.join(self.fetcher.fetchProblemSlugs()))
+            directory_entries.extend(self.fetcher.fetch_problem_slugs())
+            logging.debug('all slugs: %s', ','.join(self.fetcher.fetch_problem_slugs()))
         else:
             if path.startswith('/'):
                 path = path[1:]
@@ -127,7 +127,7 @@ class LeetFS(Operations):
             if len(components) == 1:
                 slug = components[0]
                 try:
-                    submissions = self.fetcher.fetchSubmissions(slug)
+                    submissions = self.fetcher.fetch_submissions(slug)
                 except IOError:
                     logging.info('No slug found "%s"', slug)
                     submissions = []
@@ -162,7 +162,7 @@ class LeetFS(Operations):
         file_name = components[-1]
         submission_id = int(file_name[:file_name.index('.')])
         logging.info('submission_id: %d', submission_id)
-        submission_data = self.fetcher.fetchSubmissions(components[0])
+        submission_data = self.fetcher.fetch_submissions(components[0])
         relevant_submission = [
                 submission
                 for submission in submission_data
