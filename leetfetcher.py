@@ -6,6 +6,7 @@ import time
 import urllib.error
 import urllib.request
 
+import retry
 import requests.compat
 
 
@@ -25,6 +26,7 @@ class LeetFetcher:
         self.last_fetch = 0
 
     @functools.lru_cache
+    @retry.retry(tries=3, delay=_FETCH_DELAY, backoff=2)
     def _fetch_url(self, url):
         logging.info('Fetching %s', url)
         cur_time = time.time()
