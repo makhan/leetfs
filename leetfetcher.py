@@ -38,6 +38,10 @@ class LeetFetcher:
     def fetchProblemSlugs(self):
         all_problems = self._fetchUrl(_ALL_PROBLEMS_URL)
         all_problem_data = json.loads(all_problems)
+        logging.debug('user name: %s', all_problem_data['user_name'])
+        if not all_problem_data['user_name']:
+            logging.critical('Login failed')
+            raise IOError('login failed')
         return [stat_data['stat']['question__title_slug'] for stat_data in all_problem_data['stat_status_pairs'] if  stat_data['status'] == 'ac']
 
     def fetchSubmissions(self, slug):

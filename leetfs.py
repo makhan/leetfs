@@ -135,7 +135,7 @@ class LeetFS(Operations):
                     submission_id = submission['id']
                     extension = _FILE_EXT_FROM_TYPE.get(submission['lang'], '.txt')
                     directory_entries.append(f'%{submission_id}%{extension}')
-            yield from directory_entries
+        yield from directory_entries
 
     def statfs(self, path):
         # This is total nonsense
@@ -189,7 +189,7 @@ class LeetFS(Operations):
 
 def main(mount_point):
     '''Program entry point.'''
-    logging.basicConfig(format='[%(asctime)s] - <%(levelname)s>: %(message)s', level=logging.INFO)
+    logging.basicConfig(format='[%(asctime)s] - <%(levelname)s>: %(message)s', level=logging.DEBUG)
     with open('cookie.txt', 'r', encoding='utf-8') as cookie:
         FUSE(
                 LeetFS(leetfetcher.LeetFetcher(cookie.read().strip())),
