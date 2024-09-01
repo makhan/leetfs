@@ -134,7 +134,7 @@ class LeetFS(Operations):
                 for submission in submissions:
                     submission_id = submission['id']
                     extension = _FILE_EXT_FROM_TYPE.get(submission['lang'], '.txt')
-                    directory_entries.append(f'%{submission_id}%{extension}')
+                    directory_entries.append(f'{submission_id}{extension}')
         yield from directory_entries
 
     def statfs(self, path):
