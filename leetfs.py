@@ -14,17 +14,18 @@ import leetfetcher
 
 _FILE_EXT_FROM_TYPE = {
         'bash': '.sh',
-        'c#': '.cs',
+        'csharp': '.cs',
         'c': '.c',
         'cpp': '.cc',
         'dart': '.dart',
         'elixir': '.ex',
         'erlang': '.erl',
-        'go': '.go',
+        'golang': '.go',
         'java': '.java',
         'javascript': '.js',
         'kotlin': '.kt',
         'php': '.php',
+        'python': '.py',
         'python3': '.py',
         'racket': '.rkt',
         'ruby': '.rb',
@@ -136,8 +137,6 @@ class LeetFS(Operations):
         logging.info('readdir %s', path)
         directory_entries = ['.', '..']
         if path == '/':
-            #directory_entries.extend(self.fetcher.fetch_problem_slugs())
-            #logging.debug('all slugs: %s', ','.join(self.fetcher.fetch_problem_slugs()))
             directory_entries.extend(self.problem_submissions.keys())
         else:
             if path.startswith('/'):
