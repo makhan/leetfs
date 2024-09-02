@@ -101,6 +101,9 @@ class LeetFS(Operations):
         elif len(components) == 2:
             slug = components[0]
             file_name = components[1]
+            if '.' not in file_name or not is_valid_slug(file_name[:file_name.index('.')]):
+                logging.error('Invalid slug for file: %s', file_name)
+                raise FuseOSError(errno.EEXIST)
             submission_id = int(file_name[:file_name.index('.')])
             try:
                 submissions = self.fetcher.fetch_submissions(slug)

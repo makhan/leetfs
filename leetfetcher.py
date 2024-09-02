@@ -1,3 +1,4 @@
+'''Module for classes and functions that fetch content from Leetcode.'''
 import functools
 import json
 import logging
@@ -13,10 +14,11 @@ import requests.compat
 _BASE_URL = 'https://leetcode.com/api/'
 _ALL_PROBLEMS_URL = requests.compat.urljoin(_BASE_URL, 'problems/all/')
 _SUBMISSIONS_URL_FMT = requests.compat.urljoin(_BASE_URL, 'submissions/%s')
-_FETCH_DELAY = 0.5
+_FETCH_DELAY = 1
 
 
 class LeetFetcher:
+    '''Class for getting data from Leetcode using http requests.'''
     def __init__(self, cookies):
         self.cookies = cookies
         self.headers = {
@@ -26,7 +28,7 @@ class LeetFetcher:
         self.last_fetch = 0
 
     @functools.lru_cache
-    @retry.retry(tries=3, delay=_FETCH_DELAY, backoff=2)
+    @retry.retry(tries=10, delay=_FETCH_DELAY, backoff=2)
     def _fetch_url(self, url):
         logging.info('Fetching %s', url)
         cur_time = time.time()
@@ -40,6 +42,7 @@ class LeetFetcher:
             return ans
 
     def fetch_problem_slugs(self):
+        '''Fetches a list of problems solved by the user.'''
         all_problems = self._fetch_url(_ALL_PROBLEMS_URL)
         all_problem_data = json.loads(all_problems)
         logging.debug('user name: %s', all_problem_data['user_name'])
@@ -51,27 +54,14 @@ class LeetFetcher:
                 if  stat_data['status'] == 'ac']
 
     def fetch_submissions(self, slug):
+        '''Fetches all submission for the sepcified problem.'''
         submission_data = self._fetch_url(_SUBMISSIONS_URL_FMT % slug)
         return json.loads(submission_data)['submissions_dump']
 
     def fetch_code(self, slug, submission_id):
+        '''Fetches code for the given problem and submission id.'''
         submission_data = self.fetch_submissions(slug)
         for submission in submission_data:
             if submission['id'] == submission_id:
                 return submission['code']
         return None
-
-
-def main():
-
-    with open('cookie.txt', encoding='utf-8') as cookie:
-        fetcher = LeetFetcher(cookie.read().strip())
-        slugs = fetcher.fetch_problem_slugs()
-        for problem in slugs:
-            logging.info(problem)
-        logging.info(fetcher.fetch_submissions(slugs[0]))
-        logging.info(fetcher.fetch_code(slugs[0], 1343707442))
-
-
-if __name__ == '__main__':
-    main()
