@@ -2,6 +2,7 @@
 import functools
 import json
 import logging
+import pprint
 import time
 
 import urllib.error
@@ -14,6 +15,7 @@ import requests.compat
 _BASE_URL = 'https://leetcode.com/api/'
 _ALL_PROBLEMS_URL = requests.compat.urljoin(_BASE_URL, 'problems/all/')
 _SUBMISSIONS_URL_FMT = requests.compat.urljoin(_BASE_URL, 'submissions/%s')
+_ALL_SUBMISSIONS = requests.compat.urljoin(_BASE_URL, 'submissions/?offset=%d&limit=20')
 _FETCH_DELAY = 1
 
 
@@ -31,6 +33,7 @@ class LeetFetcher:
     @retry.retry(tries=10, delay=_FETCH_DELAY, backoff=2)
     def _fetch_url(self, url):
         logging.info('Fetching %s', url)
+        pprint.pprint('Fetching %s'% url)
         cur_time = time.time()
         if cur_time - self.last_fetch < _FETCH_DELAY:
             time.sleep(_FETCH_DELAY)
@@ -65,3 +68,25 @@ class LeetFetcher:
             if submission['id'] == submission_id:
                 return submission['code']
         return None
+
+    def fetch_all_submissions(self):
+        '''Fetches all submission data.'''
+        submissions_dump = []
+        cur_offset = 0
+        while True:
+            pprint.pprint("Fetched: %d"% cur_offset)
+            submission_data = json.loads(self._fetch_url(_ALL_SUBMISSIONS % cur_offset))['submissions_dump']
+            submissions_dump.extend(submission_data)
+            #pprint.pprint(submission_data)
+            #pprint.pprint(submissions_dump)
+            if len(submission_data) < 20:
+                break
+            cur_offset += 20
+        return submissions_dump
+
+def main():
+    with open('cookie.txt', 'r', encoding='utf-8') as cookies:
+        fetcher = LeetFetcher(cookies.read().strip())
+        pprint.pprint(fetcher.fetch_all_submissions())
+if __name__ == '__main__':
+    main()

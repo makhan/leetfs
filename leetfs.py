@@ -67,6 +67,14 @@ class LeetFS(Operations):
         self.id_generator = IdGenerator()
         self.open_fd ={}
 
+        submissions_dump = fetcher.fetch_all_submissions()
+        self.problem_submissions = collections.defaultdict(list)
+
+        for submission in submissions_dump:
+            if submission['status_display'] == 'Accepted':
+                self.problem_submissions[submission['title_slug']].append(submission)
+
+
     def access(self, path, amode):
         logging.info('access %s %d', path, amode)
         return False
@@ -76,7 +84,7 @@ class LeetFS(Operations):
         components = path.split('/')[1:]
         logging.info(components)
         st = {
-                'st_atime': int(time.time()),
+                'st_atime': self.start_time,
                 'st_ctime': self.start_time,
                 'st_mtime': self.start_time,
                 'st_gid': os.getgid(),
@@ -98,6 +106,10 @@ class LeetFS(Operations):
                 raise FuseOSError(errno.EEXIST)
             logging.debug('slug: %s', slug)
             st['st_mode'] |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH | stat.S_IFDIR
+            submissions = self.problem_submissions[slug]
+            st['st_size'] = sum(len(submission['code'].encode()) for submission in submissions)
+            st['st_ctime'] = min(submission['timestamp'] for submission in submissions)
+            st['st_mtime'] = max(submission['timestamp'] for submission in submissions)
         elif len(components) == 2:
             slug = components[0]
             file_name = components[1]
@@ -105,14 +117,17 @@ class LeetFS(Operations):
                 logging.error('Invalid slug for file: %s', file_name)
                 raise FuseOSError(errno.EEXIST)
             submission_id = int(file_name[:file_name.index('.')])
-            try:
-                submissions = self.fetcher.fetch_submissions(slug)
-            except IOError as exc:
+            submissions = self.problem_submissions[slug]
+            if not submissions:
                 logging.error('No slug found : %s', slug)
-                raise FuseOSError(errno.EEXIST) from exc
+                raise FuseOSError(errno.EEXIST)
+
             submission = [s for s in submissions if s['id'] == submission_id][0]
+
             st['st_mode'] |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH | stat.S_IFREG
             st['st_size'] = len(submission['code'].encode())
+            st['st_ctime'] = submission['timestamp']
+            st['st_mtime'] = submission['timestamp']
         logging.info('status: %s', repr(st))
         return st
 
@@ -121,19 +136,19 @@ class LeetFS(Operations):
         logging.info('readdir %s', path)
         directory_entries = ['.', '..']
         if path == '/':
-            directory_entries.extend(self.fetcher.fetch_problem_slugs())
-            logging.debug('all slugs: %s', ','.join(self.fetcher.fetch_problem_slugs()))
+            #directory_entries.extend(self.fetcher.fetch_problem_slugs())
+            #logging.debug('all slugs: %s', ','.join(self.fetcher.fetch_problem_slugs()))
+            directory_entries.extend[self.problem_submissions.keys()]
         else:
             if path.startswith('/'):
                 path = path[1:]
             components = path.split('/')
             if len(components) == 1:
                 slug = components[0]
-                try:
-                    submissions = self.fetcher.fetch_submissions(slug)
-                except IOError:
-                    logging.info('No slug found "%s"', slug)
-                    submissions = []
+                submissions = self.problem_submissions[slug]
+                if not submissions:
+                    logging.error('No slug found : %s', slug)
+                    raise FuseOSError(errno.EEXIST)
                 for submission in submissions:
                     submission_id = submission['id']
                     extension = _FILE_EXT_FROM_TYPE.get(submission['lang'], '.txt')
@@ -165,10 +180,13 @@ class LeetFS(Operations):
         file_name = components[-1]
         submission_id = int(file_name[:file_name.index('.')])
         logging.info('submission_id: %d', submission_id)
-        submission_data = self.fetcher.fetch_submissions(components[0])
+        submissions = self.problem_submissions[components[0]]
+        if not submissions:
+            logging.error('No slug found : %s', slug)
+            raise FuseOSError(errno.EEXIST)
         relevant_submission = [
                 submission
-                for submission in submission_data
+                for submission in submissions
                 if submission['id'] == submission_id][0]
 
         code = relevant_submission['code'].encode()
