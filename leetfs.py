@@ -1,15 +1,19 @@
 '''A barebones FUSE filesystem to browse accepted Leetcode submissions.'''
+import argparse
 import collections
 import errno
+import json
 import logging
 import os
 import stat
 import sys
+import threading
 import time
 
 from fuse import FUSE, FuseOSError, Operations
 
 import leetfetcher
+import submission_state
 
 
 _FILE_EXT_FROM_TYPE = {
@@ -34,6 +38,10 @@ _FILE_EXT_FROM_TYPE = {
         'sql': '.sql',
         'swift': '.swift',
 }
+
+_POLL_DELAY_SECS = 2 * 60 * 60 # 2 hour
+_SUBMISSIONS_FILE = 'submissions.json'
+_COOKIES_FILE = 'cookie.txt'
 
 
 class IdGenerator:
@@ -62,18 +70,12 @@ def is_valid_slug(slug):
 class LeetFS(Operations):
     '''FUSE file system class.'''
 
-    def __init__(self, fetcher):
-        self.fetcher = fetcher
+    def __init__(self, submissions):
         self.start_time = int(time.time())
         self.id_generator = IdGenerator()
         self.open_fd ={}
-
-        submissions_dump = fetcher.fetch_all_submissions()
-        self.problem_submissions = collections.defaultdict(list)
-
-        for submission in submissions_dump:
-            if submission['status_display'] == 'Accepted':
-                self.problem_submissions[submission['title_slug']].append(submission)
+        self.problem_submissions = submissions
+        self.timer = None
 
 
     def access(self, path, amode):
@@ -207,14 +209,32 @@ class LeetFS(Operations):
         return 0
 
 
-def main(mount_point):
+
+def main(args):
     '''Program entry point.'''
+    argparser = argparse.ArgumentParser(description='An in-memory filesystem for LeetCode submissions')
+    argparser.add_argument('--cookies_file', default=_COOKIES_FILE)
+    argparser.add_argument('--submissions_file', default=_SUBMISSIONS_FILE)
+    argparser.add_argument('--poll_delay_secs', default=_POLL_DELAY_SECS)
+    argparser.add_argument('--mount_point', required=True)
+    parsed_args = argparser.parse_args()
     logging.basicConfig(format='[%(asctime)s] - <%(levelname)s>: %(message)s', level=logging.DEBUG)
-    with open('cookie.txt', 'r', encoding='utf-8') as cookie:
-        FUSE(
-                LeetFS(leetfetcher.LeetFetcher(cookie.read().strip())),
-                mount_point, nothreads=True, foreground=True)
+
+    with open(parsed_args.cookies_file, 'r', encoding='utf-8') as cookie:
+        try:
+            fetcher = leetfetcher.LeetFetcher(cookie.read().strip())
+            if not os.path.isfile(parsed_args.submissions_file):
+                with open(_SUBMISSIONS_FILE, 'w') as submissions_file:
+                    submissions_file.write('[]')
+            submissions = submission_state.SubmissionState(fetcher, parsed_args.submissions_file, parsed_args.poll_delay_secs)
+            submissions.load_file()
+            submissions.start_polling()
+            FUSE(LeetFS(submissions), mount_point, nothreads=True, foreground=True)
+        finally:
+            submissions.dump_file()
+            submissions.stop_polling()
+
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv)

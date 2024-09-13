@@ -3,6 +3,7 @@ import functools
 import json
 import logging
 import pprint
+import sched
 import time
 
 import urllib.error
@@ -69,24 +70,26 @@ class LeetFetcher:
                 return submission['code']
         return None
 
-    def fetch_all_submissions(self):
+    def fetch_all_submissions(self, last_submission_id=0):
         '''Fetches all submission data.'''
         submissions_dump = []
         cur_offset = 0
         while True:
             pprint.pprint("Fetched: %d"% cur_offset)
             submission_data = json.loads(self._fetch_url(_ALL_SUBMISSIONS % cur_offset))['submissions_dump']
-            submissions_dump.extend(submission_data)
+            logging.debug(submission_data)
+            submissions_dump.extend([submission for submission in submission_data if submission['id'] > last_submission_id])
             #pprint.pprint(submission_data)
             #pprint.pprint(submissions_dump)
-            if len(submission_data) < 20:
+            if len(submission_data) < 20 or any(submission['id'] <= last_submission_id for submission in submission_data):
                 break
             cur_offset += 20
         return submissions_dump
 
+
 def main():
     with open('cookie.txt', 'r', encoding='utf-8') as cookies:
         fetcher = LeetFetcher(cookies.read().strip())
-        pprint.pprint(fetcher.fetch_all_submissions())
+        pprint.pprint(fetcher.fetch_all_submissions(1367245734))
 if __name__ == '__main__':
     main()
