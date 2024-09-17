@@ -97,7 +97,6 @@ class LeetFS(Operations):
                 'st_nlink': 2,
         }
         if path == '/':
-            logging.debug('got root')
             st['st_mode'] |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH | stat.S_IFDIR
         elif len(components) > 2:
             logging.error('Invalid path %s', path)

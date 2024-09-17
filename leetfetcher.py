@@ -75,12 +75,8 @@ class LeetFetcher:
         submissions_dump = []
         cur_offset = 0
         while True:
-            pprint.pprint("Fetched: %d"% cur_offset)
             submission_data = json.loads(self._fetch_url(_ALL_SUBMISSIONS % cur_offset))['submissions_dump']
-            logging.debug(submission_data)
             submissions_dump.extend([submission for submission in submission_data if submission['id'] > last_submission_id])
-            #pprint.pprint(submission_data)
-            #pprint.pprint(submissions_dump)
             if len(submission_data) < 20 or any(submission['id'] <= last_submission_id for submission in submission_data):
                 break
             cur_offset += 20

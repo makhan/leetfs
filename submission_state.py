@@ -30,7 +30,6 @@ class SubmissionState:
                 if submission['status_display'] == 'Accepted':
                     self.problem_submissions[submission['title_slug']].append(submission)
         logging.info('*** Done loading data')
-        logging.debug(json.dumps(self.problem_submissions))
 
     def start_polling(self):
         if not self.timer:
