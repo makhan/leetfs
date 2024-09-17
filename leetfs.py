@@ -229,7 +229,7 @@ def main(args):
             submissions = submission_state.SubmissionState(fetcher, parsed_args.submissions_file, parsed_args.poll_delay_secs)
             submissions.load_file()
             submissions.start_polling()
-            FUSE(LeetFS(submissions), mount_point, nothreads=True, foreground=True)
+            FUSE(LeetFS(submissions), parsed_args.mount_point, nothreads=True, foreground=True)
         finally:
             submissions.dump_file()
             submissions.stop_polling()
