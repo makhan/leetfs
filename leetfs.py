@@ -2,12 +2,9 @@
 import argparse
 import collections
 import errno
-import json
 import logging
 import os
 import stat
-import sys
-import threading
 import time
 
 from fuse import FUSE, FuseOSError, Operations
@@ -99,12 +96,12 @@ class LeetFS(Operations):
         if path == '/':
             st['st_mode'] |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH | stat.S_IFDIR
         elif len(components) > 2:
-            logging.error('Invalid path %s', path)
+            logging.warn('Invalid path %s', path)
             raise FuseOSError(errno.EEXIST)
         elif len(components) == 1:
             slug = components[0]
             if not is_valid_slug(slug):
-                logging.error('Invalid slug: %s', slug)
+                logging.warn('Invalid slug: %s', slug)
                 raise FuseOSError(errno.EEXIST)
             logging.debug('slug: %s', slug)
             st['st_mode'] |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH | stat.S_IFDIR
@@ -182,7 +179,7 @@ class LeetFS(Operations):
         logging.info('submission_id: %d', submission_id)
         submissions = self.problem_submissions[components[0]]
         if not submissions:
-            logging.error('No slug found : %s', slug)
+            logging.error('No submissions found')
             raise FuseOSError(errno.EEXIST)
         relevant_submission = [
                 submission
@@ -209,23 +206,30 @@ class LeetFS(Operations):
 
 
 
-def main(args):
+def main():
     '''Program entry point.'''
-    argparser = argparse.ArgumentParser(description='An in-memory filesystem for LeetCode submissions')
+    argparser = argparse.ArgumentParser(
+            description='An in-memory filesystem for LeetCode submissions')
     argparser.add_argument('--cookies_file', default=_COOKIES_FILE)
     argparser.add_argument('--submissions_file', default=_SUBMISSIONS_FILE)
     argparser.add_argument('--poll_delay_secs', default=_POLL_DELAY_SECS)
     argparser.add_argument('--mount_point', required=True)
+    argparser.add_argument(
+            '--log_level',
+            choices=['critical', 'error', 'warn', 'info', 'debug'],
+            default='warn',
+            help='Provide a logging level')
     parsed_args = argparser.parse_args()
-    logging.basicConfig(format='[%(asctime)s] - <%(levelname)s>: %(message)s', level=logging.DEBUG)
+    logging.basicConfig(format='[%(asctime)s] - <%(levelname)s>: %(message)s', level=parsed_args.log_level.upper())
 
     with open(parsed_args.cookies_file, 'r', encoding='utf-8') as cookie:
         try:
             fetcher = leetfetcher.LeetFetcher(cookie.read().strip())
             if not os.path.isfile(parsed_args.submissions_file):
-                with open(_SUBMISSIONS_FILE, 'w') as submissions_file:
+                with open(_SUBMISSIONS_FILE, 'w', encoding='utf-8') as submissions_file:
                     submissions_file.write('[]')
-            submissions = submission_state.SubmissionState(fetcher, parsed_args.submissions_file, parsed_args.poll_delay_secs)
+            submissions = submission_state.SubmissionState(
+                    fetcher, parsed_args.submissions_file, parsed_args.poll_delay_secs)
             submissions.load_file()
             submissions.start_polling()
             FUSE(LeetFS(submissions), parsed_args.mount_point, nothreads=True, foreground=True)
@@ -236,4 +240,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
