@@ -5,7 +5,7 @@ LeetFS has been implemented using FUSE - note this means that this won't work on
 
 ## Installation
 
-LeetFS requires `retry`, and `requests`, which can be installed by running the following command:
+LeetFS requires `retry` and `requests` python libraries, which can be installed by running the following command:
 ```
 pip3 install retry requests
 ```
