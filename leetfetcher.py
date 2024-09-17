@@ -3,7 +3,6 @@ import functools
 import json
 import logging
 import pprint
-import sched
 import time
 
 import urllib.error
@@ -34,7 +33,6 @@ class LeetFetcher:
     @retry.retry(tries=10, delay=_FETCH_DELAY, backoff=2)
     def _fetch_url(self, url):
         logging.info('Fetching %s', url)
-        pprint.pprint('Fetching %s'% url)
         cur_time = time.time()
         if cur_time - self.last_fetch < _FETCH_DELAY:
             time.sleep(_FETCH_DELAY)
@@ -75,17 +73,21 @@ class LeetFetcher:
         submissions_dump = []
         cur_offset = 0
         while True:
-            submission_data = json.loads(self._fetch_url(_ALL_SUBMISSIONS % cur_offset))['submissions_dump']
-            submissions_dump.extend([submission for submission in submission_data if submission['id'] > last_submission_id])
-            if len(submission_data) < 20 or any(submission['id'] <= last_submission_id for submission in submission_data):
+            raw_data = json.loads(
+                    self._fetch_url(_ALL_SUBMISSIONS % cur_offset))['submissions_dump']
+            submissions_dump.extend([s for s in raw_data if s['id'] > last_submission_id])
+            if len(raw_data) < 20 or any(
+                    data['id'] <= last_submission_id for data in raw_data):
                 break
             cur_offset += 20
         return submissions_dump
 
 
 def main():
+    '''Program entry point.'''
     with open('cookie.txt', 'r', encoding='utf-8') as cookies:
         fetcher = LeetFetcher(cookies.read().strip())
-        pprint.pprint(fetcher.fetch_all_submissions(1367245734))
+        pprint.pprint(fetcher.fetch_all_submissions())
+
 if __name__ == '__main__':
     main()
