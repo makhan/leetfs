@@ -10,7 +10,7 @@ LeetFS requires `retry` and `requests` python libraries, which can be installed 
 pip3 install retry requests
 ```
 
-LeetFS also needs a cookies file populated with the login cookies for the user. One way of creating the cookies file is to login to LeetCode on the browser and then copying the contents of the cookie header into a text file.
+LeetFS also needs a cookies file populated with the login cookies for the user. One way of creating the cookies file is to login to LeetCode on the browser, inspecting the netwrok traffic on your browser's developer panel and then copying the contents of the cookie header from a request into a text file.
 
 Create an empty directory to be used as the mount point for the filesystem (e.g. `mkdir ~/leetcode_submissions`)
 
